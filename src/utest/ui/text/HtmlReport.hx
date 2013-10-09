@@ -23,7 +23,7 @@ import php.Lib;
 import neko.Lib;
 #elseif cpp
 import cpp.Lib;
-#elseif js
+#elseif (js && !nodejs)
 import js.Browser;
 #end
 
@@ -655,8 +655,10 @@ function utestRemoveTooltip() {
 
 	function _handler(report : HtmlReport)
 	{
-#if (php || neko || cpp || nodejs)
-		Lib.print(report.getHtml());
+#if nodejs
+	untyped(__js__("console.log")(report.getHtml()));
+#elseif (php || neko || cpp)
+	Lib.print(report.getHtml());
 #elseif js
 		var isDef = function(v) : Bool
 		{
