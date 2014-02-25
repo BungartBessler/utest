@@ -1,5 +1,6 @@
 package utest;
 
+import haxe.rtti.Meta;
 import utest.Assertation;
 
 /**
@@ -15,6 +16,8 @@ class TestHandler<T> {
 	public var onTimeout(default, null) : Dispatcher<TestHandler<T>>;
 	public var onComplete(default, null) : Dispatcher<TestHandler<T>>;
 
+	var meta : Dynamic<Dynamic<Array<Dynamic>>>;
+
 	public function new(fixture : TestFixture<T>) {
 		if(fixture == null) throw "fixture argument is null";
 		this.fixture  = fixture;
@@ -23,20 +26,48 @@ class TestHandler<T> {
 		onTested   = new Dispatcher();
 		onTimeout  = new Dispatcher();
 		onComplete = new Dispatcher();
+		meta = Meta.getFields(Type.getClass(fixture.target));
 	}
 
 	public function execute() {
-		try {
-			executeMethod(fixture.setup);
+
+
+		function execFixture (call:Bool) {
 			try {
 				executeMethod(fixture.method);
 			} catch (e : Dynamic) {
 				results.add(Error(e, exceptionStack()));
 			}
+			if (call) {
+				checkTested();
+			}
+		}
+
+
+		try {
+			
+			var async = {
+				var t = fixture.target;
+				if (Reflect.hasField(meta, fixture.setup)) {
+					var f = Reflect.field(meta, fixture.setup);
+					if (Reflect.hasField(f, "async")) true else false;
+				} else false;
+			}
+			
+
+			
+			if (async) {
+				executeMethod(fixture.setup, [execFixture.bind(true)]);
+			} else {
+				execFixture(false);
+			}
+			
 		} catch(e : Dynamic) {
 			results.add(SetupError(e, exceptionStack()));
+			checkTested();
 		}
-		checkTested();
+		
+		
 	}
 
 	static function exceptionStack(pops = 2)
@@ -146,10 +177,11 @@ class TestHandler<T> {
 		};
 	}
 
-	function executeMethod(name : String) {
-		if(name == null) return;
+	function executeMethod(name : String, params:Array<Dynamic> = null):Dynamic {
+		if (params == null) params = [];
+		if(name == null) return null;
 		bindHandler();
-		Reflect.callMethod(fixture.target, Reflect.field(fixture.target, name), []);
+		return Reflect.callMethod(fixture.target, Reflect.field(fixture.target, name), params);
 	}
 
 	function tested() {
@@ -166,12 +198,29 @@ class TestHandler<T> {
 	}
 
 	function completed() {
+		function handler () {
+			unbindHandler();
+			onComplete.dispatch(this);
+		}
 		try {
-			executeMethod(fixture.teardown);
+
+			var async = {
+				var t = fixture.target;
+				if (Reflect.hasField(meta, fixture.teardown)) {
+					var f = Reflect.field(meta, fixture.teardown);
+					if (Reflect.hasField(f, "async")) true else false;
+				} else false;
+			}
+
+			if (async) {
+				executeMethod(fixture.teardown, [handler]);
+			} else {
+				executeMethod(fixture.teardown);
+				handler();
+			}
 		} catch(e : Dynamic) {
 			results.add(TeardownError(e, exceptionStack(2))); // TODO check the correct number of functions is popped from the stack
 		}
-		unbindHandler();
-		onComplete.dispatch(this);
+		
 	}
 }
