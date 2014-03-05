@@ -1,6 +1,7 @@
 package utest;
 
 import haxe.rtti.Meta;
+import scuts.core.Promises;
 import utest.Assertation;
 
 /**
@@ -33,8 +34,20 @@ class TestHandler<T> {
 
 
 		function execFixture (call:Bool) {
+			var asyncMethod = {
+				var t = fixture.method;
+				if (Reflect.hasField(meta, fixture.method)) {
+					var f = Reflect.field(meta, fixture.method);
+					if (Reflect.hasField(f, "async")) true else false;
+				} else false;
+			}
+
 			try {
-				executeMethod(fixture.method);
+
+				if (asyncMethod)
+					executeMethod(fixture.method,true)
+				else
+					executeMethod(fixture.method);
 			} catch (e : Dynamic) {
 				results.add(Error(e, exceptionStack()));
 			}
@@ -46,7 +59,7 @@ class TestHandler<T> {
 
 		try {
 			
-			var async = {
+			var asyncSetup = {
 				var t = fixture.target;
 				if (Reflect.hasField(meta, fixture.setup)) {
 					var f = Reflect.field(meta, fixture.setup);
@@ -56,8 +69,10 @@ class TestHandler<T> {
 			
 
 			
-			if (async) {
-				executeMethod(fixture.setup, [execFixture.bind(true)]);
+			if (asyncSetup) {
+				var p:Promise<Dynamic> = executeMethod(fixture.setup, true);
+				Promises.onComplete(p, function (_) execFixture(true));
+
 			} else {
 				execFixture(false);
 			}
@@ -177,11 +192,33 @@ class TestHandler<T> {
 		};
 	}
 
-	function executeMethod(name : String, params:Array<Dynamic> = null):Dynamic {
-		if (params == null) params = [];
+	function executeMethod(name : String, async:Bool = false, asyncTimeout:Int = 1000):Dynamic {
+		
 		if(name == null) return null;
 		bindHandler();
-		return Reflect.callMethod(fixture.target, Reflect.field(fixture.target, name), params);
+		return if (async) {
+			var p = Reflect.callMethod(fixture.target, Reflect.field(fixture.target, name), []);
+			var f = addAsync(function () {}, asyncTimeout);
+
+			if (!Std.is(p, Promise)) {
+				trace("throw");
+				throw "async method should return promise";
+			}
+			var prom = Promises.onComplete(p, function (x) {
+				switch (x) {
+					case Failure(f): Assert.fail("The test returned a promise which failed to complete with failure: " + f);
+					case _: 
+				}
+				f();
+			});
+			prom;
+		} else {
+			var p = Reflect.callMethod(fixture.target, Reflect.field(fixture.target, name), []);
+			if (Std.is(p, Promise)) {
+				trace('method $name returning promises should be marked as async.');
+			}
+			p;
+		}
 	}
 
 	function tested() {
@@ -213,7 +250,8 @@ class TestHandler<T> {
 			}
 
 			if (async) {
-				executeMethod(fixture.teardown, [handler]);
+				var p : Promise<Dynamic> = executeMethod(fixture.teardown, true);
+				Promises.onComplete(p, function (_) handler());
 			} else {
 				executeMethod(fixture.teardown);
 				handler();
