@@ -59,6 +59,10 @@ class TestHandler<T> {
 
 		try {
 			
+			#if debug
+			trace("running " + fixture.method + "...");
+			#end
+
 			var asyncSetup = {
 				var t = fixture.target;
 				if (Reflect.hasField(meta, fixture.setup)) {
@@ -71,7 +75,15 @@ class TestHandler<T> {
 			
 			if (asyncSetup) {
 				var p:Promise<Dynamic> = executeMethod(fixture.setup, true);
-				Promises.onComplete(p, function (_) execFixture(true));
+				Promises.onComplete(p, function (c) {
+					switch (c) {
+						case Failure(f): 
+							trace(f);
+							results.add(SetupError(f, exceptionStack()));
+						case _:
+					}
+					execFixture(true);
+				});
 
 			} else {
 				execFixture(false);
@@ -199,18 +211,24 @@ class TestHandler<T> {
 		return if (async) {
 			var p = Reflect.callMethod(fixture.target, Reflect.field(fixture.target, name), []);
 			var f = addAsync(function () {}, asyncTimeout);
-
+			
 			if (!Std.is(p, Promise)) {
 				trace("throw");
 				throw "async method should return promise";
 			}
 			var prom = Promises.onComplete(p, function (x) {
 				switch (x) {
-					case Failure(f): Assert.fail("The test returned a promise which failed to complete with failure: " + f);
+					case Failure(f): 
+						#if debug
+						trace(f);
+						#end
+						Assert.fail("The test returned a promise which failed to complete with failure: " + f);
 					case _: 
 				}
+				trace("go on");
 				f();
 			});
+			
 			prom;
 		} else {
 			var p = Reflect.callMethod(fixture.target, Reflect.field(fixture.target, name), []);
@@ -251,7 +269,18 @@ class TestHandler<T> {
 
 			if (async) {
 				var p : Promise<Dynamic> = executeMethod(fixture.teardown, true);
-				Promises.onComplete(p, function (_) handler());
+
+				Promises.onComplete(p, function (c) {
+					switch (c) {
+						case Failure(f): 
+							trace(f);
+							results.add(TeardownError(f, exceptionStack(2)));
+						case Success(_):
+					}
+					handler();
+				});
+
+
 			} else {
 				executeMethod(fixture.teardown);
 				handler();
