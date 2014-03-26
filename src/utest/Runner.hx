@@ -1,5 +1,6 @@
 package utest;
 
+import haxe.rtti.Meta;
 import utest.Dispatcher;
 
 /**
@@ -51,6 +52,12 @@ class Runner {
 	* 			functions; when set,  the prefix parameter is meaningless
 	*/
 	public function addCase(test : Dynamic, setup = "setup", teardown = "teardown", prefix = "test", ?pattern : EReg) {
+		#if testSelectedCase
+		var meta = Meta.getType(Type.getClass(test));
+		var isSelected = if (Reflect.hasField(meta, "select")) true else false;
+		if (!isSelected) return;
+		#end
+
 		if(!Reflect.isObject(test)) throw "can't add a null object as a test case";
 		if(!isMethod(test, setup))
 			setup = null;
@@ -73,6 +80,11 @@ class Runner {
 	}
 
 	public function addFixture(fixture : TestFixture<Dynamic>) {
+		#if testSelected
+		if (!fixture.isSelected) {
+			return;
+		}
+		#end
 		fixtures.push(fixture);
 		length++;
 	}
@@ -113,7 +125,7 @@ class Runner {
 	}
 
 	function runNext() {
-		if(fixtures.length > pos)
+		if(fixtures.length > pos) 
 			runFixture(fixtures[pos++]);
 		else
 			onComplete.dispatch(this);
@@ -121,13 +133,25 @@ class Runner {
 
 	function runFixture(fixture : TestFixture<Dynamic>) {
 		var handler = new TestHandler(fixture);
+
 		handler.onComplete.add(testComplete);
 		handler.execute();
 	}
 
 	function testComplete(h : TestHandler<Dynamic>) {
-		onProgress.dispatch({ result : TestResult.ofHandler(h), done : pos, totals : length });
+		var result = TestResult.ofHandler(h);
+		onProgress.dispatch({ result : result, done : pos, totals : length });
+		#if stopOnFirstError 
+		if (!result.allOk()) {
+			onComplete.dispatch(this);		
+		} else {
+			runNext();
+		}
+		#else
 		runNext();
+		#end
+		
+		
 	}
 #end
 }

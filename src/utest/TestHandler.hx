@@ -18,6 +18,8 @@ class TestHandler<T> {
 	public var onComplete(default, null) : Dispatcher<TestHandler<T>>;
 
 	var meta : Dynamic<Dynamic<Array<Dynamic>>>;
+	
+
 
 	public function new(fixture : TestFixture<T>) {
 		if(fixture == null) throw "fixture argument is null";
@@ -28,12 +30,16 @@ class TestHandler<T> {
 		onTimeout  = new Dispatcher();
 		onComplete = new Dispatcher();
 		meta = Meta.getFields(Type.getClass(fixture.target));
+		
+		
 	}
 
 	public function execute() {
 
-
 		function execFixture (call:Bool) {
+
+
+
 			var asyncMethod = {
 				var t = fixture.method;
 				if (Reflect.hasField(meta, fixture.method)) {
@@ -222,7 +228,7 @@ class TestHandler<T> {
 						#if debug
 						trace(f);
 						#end
-						Assert.fail("The test returned a promise which failed to complete with failure: " + f);
+						Assert.fail("The test returned a promise which failed to complete with failure:\n-----------------------\n" + f + "\n-----------------------\n");
 					case _: 
 				}
 				trace("go on");
