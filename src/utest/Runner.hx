@@ -52,6 +52,7 @@ class Runner {
 	* 			functions; when set,  the prefix parameter is meaningless
 	*/
 	public function addCase(test : Dynamic, setup = "setup", teardown = "teardown", prefix = "test", ?pattern : EReg) {
+		
 		#if testSelectedCase
 		var meta = Meta.getType(Type.getClass(test));
 		var isSelected = if (Reflect.hasField(meta, "select")) true else false;

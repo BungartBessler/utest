@@ -18,7 +18,7 @@ class TestHandler<T> {
 	public var onComplete(default, null) : Dispatcher<TestHandler<T>>;
 
 	var meta : Dynamic<Dynamic<Array<Dynamic>>>;
-	
+
 
 
 	public function new(fixture : TestFixture<T>) {
@@ -30,8 +30,8 @@ class TestHandler<T> {
 		onTimeout  = new Dispatcher();
 		onComplete = new Dispatcher();
 		meta = Meta.getFields(Type.getClass(fixture.target));
-		
-		
+
+
 	}
 
 	public function execute() {
@@ -64,7 +64,7 @@ class TestHandler<T> {
 
 
 		try {
-			
+
 			#if debug
 			trace("running " + fixture.method + "...");
 			#end
@@ -76,14 +76,14 @@ class TestHandler<T> {
 					if (Reflect.hasField(f, "async")) true else false;
 				} else false;
 			}
-			
 
-			
+
+
 			if (asyncSetup) {
 				var p:Promise<Dynamic> = executeMethod(fixture.setup, true);
 				Promises.onComplete(p, function (c) {
 					switch (c) {
-						case Failure(f): 
+						case Failure(f):
 							trace(f);
 							results.add(SetupError(f, exceptionStack()));
 						case _:
@@ -94,13 +94,13 @@ class TestHandler<T> {
 			} else {
 				execFixture(false);
 			}
-			
+
 		} catch(e : Dynamic) {
 			results.add(SetupError(e, exceptionStack()));
 			checkTested();
 		}
-		
-		
+
+
 	}
 
 	static function exceptionStack(pops = 2)
@@ -117,7 +117,7 @@ class TestHandler<T> {
 #if (flash || js)
 		if(expireson == null || asyncStack.length == 0) {
 			tested();
-		} else if(haxe.Timer.stamp() > expireson) {
+		} else if(#if notimeout false && #end haxe.Timer.stamp() > expireson) {
 			timeout();
 		} else {
 			haxe.Timer.delay(checkTested, POLLING_TIME);
@@ -211,30 +211,28 @@ class TestHandler<T> {
 	}
 
 	function executeMethod(name : String, async:Bool = false, asyncTimeout:Int = 1000):Dynamic {
-		
+
 		if(name == null) return null;
 		bindHandler();
 		return if (async) {
 			var p = Reflect.callMethod(fixture.target, Reflect.field(fixture.target, name), []);
 			var f = addAsync(function () {}, asyncTimeout);
-			
+
 			if (!Std.is(p, Promise)) {
-				trace("throw");
 				throw "async method should return promise";
 			}
 			var prom = Promises.onComplete(p, function (x) {
 				switch (x) {
-					case Failure(f): 
+					case Failure(f):
 						#if debug
 						trace(f);
 						#end
 						Assert.fail("The test returned a promise which failed to complete with failure:\n-----------------------\n" + f + "\n-----------------------\n");
-					case _: 
+					case _:
 				}
-				trace("go on");
 				f();
 			});
-			
+
 			prom;
 		} else {
 			var p = Reflect.callMethod(fixture.target, Reflect.field(fixture.target, name), []);
@@ -278,7 +276,7 @@ class TestHandler<T> {
 
 				Promises.onComplete(p, function (c) {
 					switch (c) {
-						case Failure(f): 
+						case Failure(f):
 							trace(f);
 							results.add(TeardownError(f, exceptionStack(2)));
 						case Success(_):
@@ -294,6 +292,6 @@ class TestHandler<T> {
 		} catch(e : Dynamic) {
 			results.add(TeardownError(e, exceptionStack(2))); // TODO check the correct number of functions is popped from the stack
 		}
-		
+
 	}
 }
