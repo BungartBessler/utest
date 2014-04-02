@@ -55,6 +55,7 @@ class TestHandler<T> {
 				else
 					executeMethod(fixture.method);
 			} catch (e : Dynamic) {
+				printStack(e);
 				results.add(Error(e, exceptionStack()));
 			}
 			if (call) {
@@ -96,6 +97,7 @@ class TestHandler<T> {
 			}
 
 		} catch(e : Dynamic) {
+			printStack(e);
 			results.add(SetupError(e, exceptionStack()));
 			checkTested();
 		}
@@ -148,6 +150,16 @@ class TestHandler<T> {
 		Assert.createEvent = function(f, ?t){ return function(e){}};
 	}
 
+	function printStack (e) {
+		#if (debug && !hideStackTrace)
+		if (e.stack != null) {
+			trace(e.stack);
+		} else {
+			trace(Std.string(untyped __new__("Error").stack));
+		}
+		#end
+	}
+
 	/**
 	* Adds a function that is called asynchronously.
 	*
@@ -172,6 +184,7 @@ class TestHandler<T> {
 	* @param	timeout, the maximum time to wait for f() (default is 250)
 	* @return	returns a function closure that must be executed asynchrnously
 	*/
+
 	public function addAsync(f : Void->Void, timeout = 250) {
 		if (null == f)
 			f = function() { }
@@ -187,6 +200,9 @@ class TestHandler<T> {
 				handler.bindHandler();
 				f();
 			} catch(e : Dynamic) {
+
+				printStack(e);
+
 				handler.results.add(AsyncError(e, exceptionStack(0))); // TODO check the correct number of functions is popped from the stack
 			}
 		};
@@ -205,6 +221,7 @@ class TestHandler<T> {
 				handler.bindHandler();
 				f(e);
 			} catch(e : Dynamic) {
+				printStack(e);
 				handler.results.add(AsyncError(e, exceptionStack(0))); // TODO check the correct number of functions is popped from the stack
 			}
 		};
@@ -216,6 +233,7 @@ class TestHandler<T> {
 		bindHandler();
 		return if (async) {
 			var p = Reflect.callMethod(fixture.target, Reflect.field(fixture.target, name), []);
+
 			var f = addAsync(function () {}, asyncTimeout);
 
 			if (!Std.is(p, Promise)) {
@@ -290,6 +308,7 @@ class TestHandler<T> {
 				handler();
 			}
 		} catch(e : Dynamic) {
+			printStack(e);
 			results.add(TeardownError(e, exceptionStack(2))); // TODO check the correct number of functions is popped from the stack
 		}
 
