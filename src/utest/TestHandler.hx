@@ -85,7 +85,6 @@ class TestHandler<T> {
 				Promises.onComplete(p, function (c) {
 					switch (c) {
 						case Failure(f):
-							trace(f);
 							results.add(SetupError(f, exceptionStack()));
 						case _:
 					}
@@ -97,6 +96,7 @@ class TestHandler<T> {
 			}
 
 		} catch(e : Dynamic) {
+
 			printStack(e);
 			results.add(SetupError(e, exceptionStack()));
 			checkTested();
@@ -151,7 +151,7 @@ class TestHandler<T> {
 	}
 
 	function printStack (e) {
-		#if (debug && !hideStackTrace)
+		#if (debug && printStackTrace)
 		if (e.stack != null) {
 			trace(e.stack);
 		} else {
