@@ -119,7 +119,7 @@ class TestHandler<T> {
 #if (flash || js)
 		if(expireson == null || asyncStack.length == 0) {
 			tested();
-		} else if(#if notimeout false && #end haxe.Timer.stamp() > expireson) {
+		} else if(#if noTimeout false && #end haxe.Timer.stamp() > expireson) {
 			timeout();
 		} else {
 			haxe.Timer.delay(checkTested, POLLING_TIME);
