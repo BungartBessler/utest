@@ -4,6 +4,8 @@ import haxe.rtti.Meta;
 import scuts.core.Promises;
 import utest.Assertation;
 
+private typedef MetaData = Dynamic<Dynamic<Array<Dynamic>>>;
+
 /**
 * @todo add documentation
 */
@@ -17,8 +19,7 @@ class TestHandler<T> {
 	public var onTimeout(default, null) : Dispatcher<TestHandler<T>>;
 	public var onComplete(default, null) : Dispatcher<TestHandler<T>>;
 
-	var meta : Dynamic<Dynamic<Array<Dynamic>>>;
-
+	var metas : Array<MetaData>;
 
 
 	public function new(fixture : TestFixture<T>) {
@@ -29,8 +30,35 @@ class TestHandler<T> {
 		onTested   = new Dispatcher();
 		onTimeout  = new Dispatcher();
 		onComplete = new Dispatcher();
-		meta = Meta.getFields(Type.getClass(fixture.target));
 
+		metas = getMetaChain();
+
+
+	}
+
+	public function getMetaChain () {
+		var res = [];
+		function loop (c) {
+			var meta = Meta.getFields(c);
+			res.unshift(meta);
+			var superClass = Type.getSuperClass(c);
+			if (superClass != null) {
+				loop(superClass);
+			}
+		}
+		loop(Type.getClass(fixture.target));
+		return res;
+	}
+
+	public function fieldHasMeta (field:String, metaName:String) {
+
+		for (m in metas) {
+			if (Reflect.hasField(m, fixture.method)) {
+				var f = Reflect.field(m, fixture.method);
+				if (Reflect.hasField(f, metaName)) return true;
+			}
+		}
+		return false;
 
 	}
 
@@ -42,10 +70,7 @@ class TestHandler<T> {
 
 			var asyncMethod = {
 				var t = fixture.method;
-				if (Reflect.hasField(meta, fixture.method)) {
-					var f = Reflect.field(meta, fixture.method);
-					if (Reflect.hasField(f, "async")) true else false;
-				} else false;
+				fieldHasMeta(fixture.method, "async");
 			}
 
 			try {
@@ -72,10 +97,7 @@ class TestHandler<T> {
 
 			var asyncSetup = {
 				var t = fixture.target;
-				if (Reflect.hasField(meta, fixture.setup)) {
-					var f = Reflect.field(meta, fixture.setup);
-					if (Reflect.hasField(f, "async")) true else false;
-				} else false;
+				fieldHasMeta(fixture.setup, "async");
 			}
 
 
@@ -283,10 +305,7 @@ class TestHandler<T> {
 
 			var async = {
 				var t = fixture.target;
-				if (Reflect.hasField(meta, fixture.teardown)) {
-					var f = Reflect.field(meta, fixture.teardown);
-					if (Reflect.hasField(f, "async")) true else false;
-				} else false;
+				fieldHasMeta(fixture.teardown, "async");
 			}
 
 			if (async) {
