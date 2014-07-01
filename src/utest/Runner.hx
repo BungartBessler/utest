@@ -52,7 +52,7 @@ class Runner {
 	* 			functions; when set,  the prefix parameter is meaningless
 	*/
 	public function addCase(test : Dynamic, setup = "setup", teardown = "teardown", prefix = "test", ?pattern : EReg) {
-		
+
 		#if testSelectedCase
 		var meta = Meta.getType(Type.getClass(test));
 		var isSelected = if (Reflect.hasField(meta, "select")) true else false;
@@ -126,7 +126,7 @@ class Runner {
 	}
 
 	function runNext() {
-		if(fixtures.length > pos) 
+		if(fixtures.length > pos)
 			runFixture(fixtures[pos++]);
 		else
 			onComplete.dispatch(this);
@@ -142,17 +142,17 @@ class Runner {
 	function testComplete(h : TestHandler<Dynamic>) {
 		var result = TestResult.ofHandler(h);
 		onProgress.dispatch({ result : result, done : pos, totals : length });
-		#if stopOnFirstError 
+		#if stopOnFirstError
 		if (!result.allOk()) {
-			onComplete.dispatch(this);		
+			onComplete.dispatch(this);
 		} else {
 			runNext();
 		}
 		#else
 		runNext();
 		#end
-		
-		
+
+
 	}
 #end
 }

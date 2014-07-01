@@ -25,6 +25,7 @@ class PackageResult {
 		var pack = getOrCreatePackage(result.pack, flattenPackage, this);
 		var cls = getOrCreateClass(pack, result.cls, result.setup, result.teardown);
 		var fix = createFixture(result.method, result.assertations);
+
 		cls.add(fix);
 	}
 
@@ -121,7 +122,7 @@ class PackageResult {
 		}
 		return names;
 	}
-	
+
 	function createFixture(method : String, assertations : Iterable<Assertation>) {
 		var f = new FixtureResult(method);
 		for(assertation in assertations)

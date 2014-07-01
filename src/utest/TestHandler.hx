@@ -53,8 +53,8 @@ class TestHandler<T> {
 	public function fieldHasMeta (field:String, metaName:String) {
 
 		for (m in metas) {
-			if (Reflect.hasField(m, fixture.method)) {
-				var f = Reflect.field(m, fixture.method);
+			if (Reflect.hasField(m, field)) {
+				var f = Reflect.field(m, field);
 				if (Reflect.hasField(f, metaName)) return true;
 			}
 		}
@@ -79,13 +79,15 @@ class TestHandler<T> {
 					executeMethod(fixture.method,true)
 				else
 					executeMethod(fixture.method);
+
 			} catch (e : Dynamic) {
+
 				printStack(e);
 				results.add(Error(e, exceptionStack()));
 			}
-			if (call) {
-				checkTested();
-			}
+
+			checkTested();
+
 		}
 
 
@@ -99,6 +101,7 @@ class TestHandler<T> {
 				var t = fixture.target;
 				fieldHasMeta(fixture.setup, "async");
 			}
+
 
 
 
@@ -118,6 +121,7 @@ class TestHandler<T> {
 			}
 
 		} catch(e : Dynamic) {
+			trace(e);
 
 			printStack(e);
 			results.add(SetupError(e, exceptionStack()));
@@ -130,6 +134,7 @@ class TestHandler<T> {
 	static function exceptionStack(pops = 2)
 	{
 		var stack = haxe.CallStack.exceptionStack();
+
 		while (pops-- > 0)
 		{
 			stack.pop();
@@ -219,8 +224,11 @@ class TestHandler<T> {
 				return;
 			}
 			try {
+
 				handler.bindHandler();
+
 				f();
+
 			} catch(e : Dynamic) {
 
 				printStack(e);
@@ -297,6 +305,7 @@ class TestHandler<T> {
 	}
 
 	function completed() {
+
 		function handler () {
 			unbindHandler();
 			onComplete.dispatch(this);

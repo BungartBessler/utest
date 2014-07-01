@@ -34,13 +34,18 @@ class Dispatcher<T> {
 	public function dispatch(e) {
 		try {
 			// prevents problems with self removing events
+
 			var list = handlers.copy();
+
 			for( l in list )
 				l(e);
+
 			return true;
 		} catch( exc : EventException ) {
+			trace("error" + exc);
 			return false;
 		}
+		return false;
 	}
 
 	public function has() {
